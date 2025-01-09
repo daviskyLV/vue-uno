@@ -32,17 +32,19 @@
 
 <script lang="ts">
 import { z } from 'zod';
+import { type Game } from '../game_logic/Game';
 
 const sessionSchema = z.array(z.object({
-    gameId: z.number(),
+    gameId: z.string(),
     username: z.string().trim().min(3),
     token: z.string().trim().min(1)
 }))
 
 export default {
     data() {
+        let g: Game[] = []
         return {
-            games: []
+            games: g
         }
     },
     methods: {
@@ -56,9 +58,9 @@ export default {
             // TODO: create game and join game 
         },
 
-        joinGame(gameId: number) {
+        joinGame(gameId: string) {
             const sessionCookie = localStorage.getItem("session")
-            let gameSessions: {gameId: number, username: string, token: string}[] = []
+            let gameSessions: {gameId: string, username: string, token: string}[] = []
 
             // getting existing game sessions
             if (sessionCookie !== null) {
