@@ -88,3 +88,19 @@ export const removeCard = (
     player.hand.splice(matchingIndex, 1)
     return player
 }
+
+/**
+ * Remove player hand from player object
+ * @param player The player state to use
+ * @param pureFunction Whether the function should act as pure and return a completely new player object, default false
+ */
+export const limitPlayerInfo = (
+    player: Player,
+    pureFunction: boolean = false
+): Player => {
+    if (pureFunction)
+        player = copyPlayer(player)
+
+    player.hand = undefined
+    return player
+}

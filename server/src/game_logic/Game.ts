@@ -2,7 +2,7 @@
 import { shuffleArray } from "../utils/utils"
 import { CardColor, CardType, copyCard, createDeck, reshuffleCards, type Card } from "./Card"
 import { calculateNextPlayer, calculatePoints, isCardPlayable } from "./GameUtils"
-import { copyPlayer, createPlayer, removeCard, type Player } from "./Player"
+import { copyPlayer, createPlayer, limitPlayerInfo, removeCard, type Player } from "./Player"
 
 export type Game = {
     id: string
@@ -334,4 +334,28 @@ export const newRound = (
         direction: 1,
         currentPlayer: 0
     }
+}
+
+/**
+ * Remove player hand data and draw pile data from game
+ * @param game The game state to use
+ * @param savedPlayerHands A list of player names whose hands are saved
+ * @param pureFunction Whether the function should act as pure and return a completely new game object, default false
+ */
+export const limitGameInfo = (
+    game: Game,
+    savedPlayerHands: string[],
+    pureFunction: boolean = false
+): Game => {
+    if (pureFunction)
+        game = copyGame(game)
+
+    game.drawPile = undefined
+    for (let i = 0; i < game.players.length; i++) {
+        const plr = game.players[i]
+        if (!savedPlayerHands.find(p => p === plr.username))
+            game.players[i] = limitPlayerInfo(plr)
+    }
+
+    return game
 }
