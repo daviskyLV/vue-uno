@@ -11,22 +11,6 @@
             </p>
             <button @click="joinGame(game.id)" class="join-btn">Join Game</button>
         </div>
-        <div class="game-card">
-            <p><span class="game-title">Hello WOOORLD!!</span> (Players: 123/1234)</p>
-            <button class="join-btn">Join Game</button>
-        </div>
-        <div class="game-card">
-            <p><span class="game-title">Hello WOOORLD!!</span> (Players: 123/1234)</p>
-            <button class="join-btn">Join Game</button>
-        </div>
-        <div class="game-card">
-            <p><span class="game-title">Hello WOOORLD!!</span> (Players: 123/1234)</p>
-            <button class="join-btn">Join Game</button>
-        </div>
-        <div class="game-card">
-            <p><span class="game-title">Hello WOOORLD!!</span> (Players: 123/1234)</p>
-            <button class="join-btn">Join Game</button>
-        </div>
     </div>
 </template>
 
@@ -76,6 +60,9 @@ export default {
     created() {
         this.socket.on("newGame", (game: Game) => {
             this.games.push(game)
+        })
+        this.socket.emit("fetchGames", (games: Game[]) => {
+            this.games = games
         })
     },
     methods: {
