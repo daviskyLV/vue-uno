@@ -23,7 +23,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = !!localStorage.getItem("session")
+    const isAuthenticated = !!localStorage.getItem("sessions")
     if (to.meta.requiresAuth && !isAuthenticated) {
         next("/")
     } else {
