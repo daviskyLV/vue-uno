@@ -98,6 +98,54 @@ io.on("connection", (socket: Socket) => {
             return
         }
     })
+
+    socket.on("fetchGames", async (
+        callback: (games: Game[]) => void
+    ) => {
+        let gs: Game[] = []
+        for (const id in games) {
+            if (games.hasOwnProperty(id)) {
+                gs.push(limitGameInfo(games[id], [], true))
+            }
+        }
+        gs.sort((a: Game, b: Game) => a.id.localeCompare(b.id))
+        callback(gs)
+    })
+
+    socket.on("fetchGameInfo", async (
+        gameId: string,
+        plrToken: string,
+        callback: (game: Game | null) => void
+    ) => {
+        const game = games[gameId]
+        if (game === undefined) {
+            callback(null)
+            return
+        }
+
+        try {
+            const decoded = decryptJWT(plrToken)
+            if (!(
+                "plrName" in decoded && "gameId" in decoded &&
+                typeof decoded.plrName === "string" && typeof decoded.gameId === "string"
+            )) {
+                callback(null)
+                return
+            }
+
+            // verifying
+            const plrInGame = game.players.find(p => p.username === decoded.plrName)
+            if (plrInGame === undefined || decoded.gameId !== gameId) {
+                callback(null)
+                return
+            }
+
+            callback(limitGameInfo(game, [plrInGame.username], true))
+        } catch (err) {
+            callback(null)
+            return
+        }
+    })
 })
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`))
