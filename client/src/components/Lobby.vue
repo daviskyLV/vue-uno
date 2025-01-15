@@ -15,35 +15,10 @@
 </template>
 
 <script lang="ts">
-import { z } from 'zod';
 import { type Game } from '../game_logic/Game';
-import { inject } from 'vue';
+import { inject, onMounted, ref } from 'vue';
 import { Socket } from 'socket.io-client';
-
-type GameSession = {
-    gameId: string
-    username: string
-    token: string
-}
-
-const sessionSchema = z.array(z.object({
-    gameId: z.string(),
-    username: z.string().trim().min(3),
-    token: z.string().trim().min(1)
-}))
-
-const getGamesCookie = (): GameSession[] => {
-    const sessionCookie = localStorage.getItem("sessions")
-    let gameSessions: GameSession[] = []
-
-    // getting existing game sessions
-    if (sessionCookie !== null) {
-        const parsedJSON = JSON.parse(sessionCookie)
-        gameSessions = sessionSchema.parse(parsedJSON)
-    }
-
-    return gameSessions
-}
+import { parseSessionsCookie, type SessionsCookie } from '../utils/utils';
 
 export default {
     setup() {
@@ -51,19 +26,24 @@ export default {
         if (!socket) {
             throw new Error("Socket not provided")
         }
-        return {socket}
-    },
-    data() {
-        let g: Game[] = []
-        return { games: g }
-    },
-    created() {
-        this.socket.on("newGame", (game: Game) => {
-            this.games.push(game)
-        })
-        this.socket.emit("fetchGames", (games: Game[]) => {
-            this.games = games
-        })
+
+        const games = ref<Game[]>([])
+
+        const newGame = () => {
+            socket.on("newGame", (game: Game) => {
+                games.value.push(game)
+            })
+        }
+        onMounted(newGame)
+
+        const fetchGames = () => {
+            socket.emit("fetchGames", (returnedGames: Game[]) => {
+                games.value = returnedGames
+            })
+        }
+        onMounted(fetchGames)
+
+        return {socket, games}
     },
     methods: {
         createGame() {
@@ -87,15 +67,15 @@ export default {
                         return
                     }
 
-                    let gameSessions: GameSession[] = []
+                    let gameSessions: SessionsCookie = {}
                     try {
-                        gameSessions = getGamesCookie()
+                        gameSessions = parseSessionsCookie(localStorage.getItem("sessions"))
                     } catch (err) {
                         alert("Failed to create game!")
                         return
                     }
 
-                    gameSessions.push({gameId, token, username: playerName})
+                    gameSessions[gameId] = {gameId, token, username: playerName}
                     localStorage.setItem("sessions", JSON.stringify(gameSessions))
                     this.joinGame(gameId)
                 }
@@ -103,25 +83,18 @@ export default {
         },
 
         joinGame(gameId: string) {
-            let gameSessions: GameSession[] = []
+            let gameSessions: SessionsCookie = {}
             try {
-                gameSessions = getGamesCookie()
+                gameSessions = parseSessionsCookie(localStorage.getItem("sessions"))
             } catch (err) {
                 alert("Failed to join game!")
                 return
             }
 
-            let playerInGame = -1 // -1 for false, index in gameSessions for true
-            for (let i = 0; i < gameSessions.length; i++) {
-                if (gameSessions[i].gameId === gameId) {
-                    playerInGame = i
-                    break
-                }
-            }
-
+            const ses = gameSessions[gameId]
             let plrName = "error"
             let token: string | undefined = undefined
-            if (playerInGame === -1) {
+            if (ses === undefined) {
                 const input = prompt("Enter your name")
                 if (input === null || input.trim().length < 3) {
                     alert("Username must be at least 3 characters long!")
@@ -129,7 +102,6 @@ export default {
                 }
                 plrName = input
             } else {
-                const ses = gameSessions[playerInGame]
                 plrName = ses.username
                 token = ses.token
             }
@@ -141,15 +113,15 @@ export default {
                         alert("Failed to join game!")
                         return
                     }
-                    let gameSessions: GameSession[] = []
+                    let gameSessions: SessionsCookie = {}
                     try {
-                        gameSessions = getGamesCookie()
+                        gameSessions = parseSessionsCookie(localStorage.getItem("sessions"))
                     } catch (err) {
                         alert("Failed to create game!")
                         return
                     }
 
-                    gameSessions.push({gameId, token: tok, username: plrName})
+                    gameSessions[gameId] = {gameId, token: tok, username: plrName}
                     localStorage.setItem("sessions", JSON.stringify(gameSessions))
                     this.$router.push(`/game/${gameId}`)
                 }
@@ -161,6 +133,7 @@ export default {
 
 <style scoped>
 .game-list {
+    font-family: 'Arial', sans-serif;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -178,9 +151,11 @@ export default {
 
 .game-title {
     color: blue;
+    font-weight: bold;
 }
 
 .topbar {
+    font-family: 'Arial', sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;

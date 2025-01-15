@@ -1,13 +1,12 @@
-import { addPlayer, createGame, Game, limitGameInfo } from "./game_logic/Game"
+import { Game } from "./game_logic/Game"
 import express from 'express'
 import http from "http"
 import { Socket } from "socket.io"
-import { decryptJWT, encryptJWT } from "./utils/security"
+import { Card, CardColor } from "./game_logic/Card"
+import { createGame, fetchGameInfo, fetchGames, joinGame } from "./game-data"
+import { drawCard, playCard } from "./game-actions"
 
 const PORT = process.env.PORT ?? 3000
-
-// Where game rooms are saved
-const games: {[id: string]: Game} = {}
 
 // Server setup
 const app = express()
@@ -21,19 +20,7 @@ io.on("connection", (socket: Socket) => {
         plrName: string,
         callback: (gameId: string, token: string) => void
     ) => {
-        let game: Game
-        try {
-            game = createGame(gameName, maxPlrs, [plrName])
-        } catch (err) {
-            console.warn(`Failed to create game ${gameName}, with ${maxPlrs} max players and starter player ${plrName}`)
-            callback("", "")
-            return
-        }
-
-        games[game.id] = game
-        const token = encryptJWT({plrName, gameId: game.id})
-        callback(game.id, token)
-        io.emit("newGame", limitGameInfo(game, [], true))
+        createGame(io, gameName, maxPlrs, plrName, callback)
     })
 
     socket.on("joinGame", async (
@@ -42,109 +29,39 @@ io.on("connection", (socket: Socket) => {
         plrToken: string | undefined,
         callback: (game: Game | null, token: string) => void
     ) => {
-        let game = games[gameId]
-        if (game === undefined) {
-            callback(null, "")
-            return
-        }
-
-        const plrInGame = game.players.find(p => p.username === plrName)
-        if (plrToken === undefined) {
-            if (plrInGame !== undefined) {
-                // player already in game
-                callback(null, "")
-                return
-            }
-
-            // adding player to game
-            try {
-                game = addPlayer(game, plrName)
-                games[game.id] = game
-                const token = encryptJWT({plrName, gameId: game.id})
-                callback(limitGameInfo(game, [plrName], true), token)
-                // notifying others that game state has changed
-                io.emit("gameUpdate", game.id)
-                return
-            } catch (err) {
-                callback(null, "")
-                return
-            }
-        }
-
-        // Player provided a token, using that to join
-        try {
-            const decoded = decryptJWT(plrToken)
-            if (!(
-                "plrName" in decoded && "gameId" in decoded &&
-                typeof decoded.plrName === "string" && typeof decoded.gameId === "string"
-            )) {
-                callback(null, "")
-                return
-            }
-
-            // verifying
-            if (!(plrName === decoded.plrName && gameId === decoded.gameId &&
-                plrInGame !== undefined
-            )) {
-                callback(null, "")
-                return
-            }
-
-            // player already a part of game, sending back game info
-            callback(limitGameInfo(game, [plrName], true), plrToken)
-        } catch (err) {
-            console.warn(`Error decoding JWT ${plrToken}`)
-            callback(null, "")
-            return
-        }
+        joinGame(io, gameId, plrName, plrToken, callback)
     })
 
     socket.on("fetchGames", async (
         callback: (games: Game[]) => void
     ) => {
-        let gs: Game[] = []
-        for (const id in games) {
-            if (games.hasOwnProperty(id)) {
-                gs.push(limitGameInfo(games[id], [], true))
-            }
-        }
-        gs.sort((a: Game, b: Game) => a.id.localeCompare(b.id))
-        callback(gs)
+       fetchGames(callback) 
     })
 
     socket.on("fetchGameInfo", async (
         gameId: string,
-        plrToken: string,
+        plrToken: string | undefined,
         callback: (game: Game | null) => void
     ) => {
-        const game = games[gameId]
-        if (game === undefined) {
-            callback(null)
-            return
-        }
+        fetchGameInfo(gameId, plrToken, callback)
+    })
 
-        try {
-            const decoded = decryptJWT(plrToken)
-            if (!(
-                "plrName" in decoded && "gameId" in decoded &&
-                typeof decoded.plrName === "string" && typeof decoded.gameId === "string"
-            )) {
-                callback(null)
-                return
-            }
+    socket.on("drawCard", async (
+        gameId: string,
+        plrToken: string,
+        callback: (success: boolean) => void
+    ) => {
+        drawCard(io, gameId, plrToken, callback)
+    })
 
-            // verifying
-            const plrInGame = game.players.find(p => p.username === decoded.plrName)
-            if (plrInGame === undefined || decoded.gameId !== gameId) {
-                callback(null)
-                return
-            }
-
-            callback(limitGameInfo(game, [plrInGame.username], true))
-        } catch (err) {
-            callback(null)
-            return
-        }
+    socket.on("playCard", async (
+        gameId: string,
+        plrToken: string,
+        card: Card,
+        wildcardOverride: CardColor,
+        callback: (success: boolean) => void
+    ) => {
+        playCard(io, gameId, plrToken, card, wildcardOverride, callback)
     })
 })
 

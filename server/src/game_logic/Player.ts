@@ -73,15 +73,9 @@ export const removeCard = (
     if (player.hand === undefined)
         throw new Error("Player hand is undefined!")
 
-    let matchingIndex = -1
-    for (let i = 0; i < player.hand.length; i++) {
-        const c = player.hand[i]
-        if (c.color === card.color && c.type === card.type && c.value === c.value) {
-            matchingIndex = i
-            break;
-        }
-    }
-
+    // TODO:
+    // FIX BUG WHERE IT REMOVES INDEX 0 CARD IF THERE ARE 2 EXACTLY SAME CARDS
+    let matchingIndex = player.hand.findIndex(c => c.id === card.id)
     if (matchingIndex === -1)
         throw new Error("Card not found in player's hand!")
 

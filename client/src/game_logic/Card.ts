@@ -22,6 +22,7 @@ export enum CardType {
  * Value is only set for Number type cards to the number on the card.
  */
 export type Card = {
+    id: number
     color: CardColor
     type: CardType
     value?: number
@@ -37,24 +38,24 @@ export const createDeck = (): Card[] => {
     colors.forEach(col => {
         // Numbers from 1 to 9 (double)
         for (let i = 1; i < 10; i++) {
-            cards.push({color: col, type: CardType.Number, value: i})
-            cards.push({color: col, type: CardType.Number, value: i})
+            cards.push({id: cards.length, color: col, type: CardType.Number, value: i})
+            cards.push({id: cards.length, color: col, type: CardType.Number, value: i})
         }
         // Number 0
-        cards.push({color: col, type: CardType.Number, value: 0})
+        cards.push({id: cards.length, color: col, type: CardType.Number, value: 0})
 
         // Special cards
         for (let i = 0; i < 2; i++) {
-            cards.push({color: col, type: CardType.Skip})
-            cards.push({color: col, type: CardType.Reverse})
-            cards.push({color: col, type: CardType.AddTwo})
+            cards.push({id: cards.length, color: col, type: CardType.Skip})
+            cards.push({id: cards.length, color: col, type: CardType.Reverse})
+            cards.push({id: cards.length, color: col, type: CardType.AddTwo})
         }
     });
 
     // Wildcards
     for (let i = 0; i < 4; i++) {
-        cards.push({color: CardColor.Wild, type: CardType.Wild})
-        cards.push({color: CardColor.Wild, type: CardType.WildAddFour})
+        cards.push({id: cards.length, color: CardColor.Wild, type: CardType.Wild})
+        cards.push({id: cards.length, color: CardColor.Wild, type: CardType.WildAddFour})
     }
 
     return cards
@@ -66,6 +67,7 @@ export const createDeck = (): Card[] => {
  */
 export const copyCard = (card: Card): Card => {
     return {
+        id: card.id,
         color: card.color,
         type: card.type,
         value: card.value

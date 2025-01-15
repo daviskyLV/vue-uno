@@ -158,8 +158,8 @@ export const drawCard = (
         // No cards in draw pile, reshuffling discard pile
         const topCard = game.discardPile.pop()
         if (topCard !== undefined) {
-            game.discardPile = [topCard]
             game.drawPile = reshuffleCards(game.discardPile)
+            game.discardPile = [topCard]
         }
         drawnCard = game.drawPile.pop()
         if (drawnCard !== undefined)
@@ -262,8 +262,12 @@ export const playCard = (
         game.discardPile.push({...card})
     }
 
-    // Removing card from player
-    game.players[game.currentPlayer] = removeCard(game.players[game.currentPlayer], card, false)
+    // Current player related stuff
+    const curPlr = game.players[game.currentPlayer]
+    if (curPlr.hand === undefined)
+        throw new Error("Current player hand is undefined!")
+
+    removeCard(game.players[game.currentPlayer], card, false)
     // Other stuff
     game.currentPlayer = calculateNextPlayer(game.currentPlayer, game.players.length, game.direction, card.type)
     if (card.type === CardType.Reverse) {

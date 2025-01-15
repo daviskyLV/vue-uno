@@ -158,8 +158,8 @@ export const drawCard = (
         // No cards in draw pile, reshuffling discard pile
         const topCard = game.discardPile.pop()
         if (topCard !== undefined) {
-            game.discardPile = [topCard]
             game.drawPile = reshuffleCards(game.discardPile)
+            game.discardPile = [topCard]
         }
         drawnCard = game.drawPile.pop()
         if (drawnCard !== undefined)
